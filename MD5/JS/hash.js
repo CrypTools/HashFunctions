@@ -244,3 +244,6 @@ String.prototype.md5 = function() {
 
     return temp.toLowerCase();
 };
+
+
+module.exports = text => text.md5();
