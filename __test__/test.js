@@ -1,7 +1,7 @@
 // Test made using EyeJS - https://eye.js.org
 const pLib = require('path')
-const md5 = pLib.normalize(__testDir + "/../MD5/JS/")
-const sha256 = pLib.normalize(__testDir + "/../SHA256/JS/")
+const md5 = pLib.normalize(__testDir + "/../MD5/js/")
+const sha256 = pLib.normalize(__testDir + "/../SHA256/js/")
 
 const md5hash = require(md5 + "hash.js")
 const sha256hash = require(sha256 + "hash.js")
