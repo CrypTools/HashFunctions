@@ -21,25 +21,25 @@ public extension Data {
 }
 
 final public class SHA256 {
-
+    
     let message: Array<UInt8>
-
+    
     init(_ message: Array<UInt8>) {
         self.message = message
     }
-
+    
     func calculate32() -> Array<UInt8> {
         var tmpMessage = bitPadding(to: self.message, blockSize: 64, allowance: 64 / 8)
-
+        
         // hash values
         var hh = Array<UInt32>()
         h.forEach {(h) -> () in
             hh.append(UInt32(h))
         }
-
+        
         // append message length, in a 64-bit big-endian integer. So now the message length is a multiple of 512 bits.
         tmpMessage += arrayOfBytes(value: message.count * 8, length: 64 / 8)
-
+        
         // Process the message in successive 512-bit chunks:
         let chunkSizeBytes = 512 / 8 // 64
         for chunk in BytesSequence(chunkSize: chunkSizeBytes, data: tmpMessage) {
@@ -61,7 +61,7 @@ final public class SHA256 {
                     break
                 }
             }
-
+            
             var A = hh[0]
             var B = hh[1]
             var C = hh[2]
@@ -70,7 +70,7 @@ final public class SHA256 {
             var F = hh[5]
             var G = hh[6]
             var H = hh[7]
-
+            
             // Main loop
             for j in 0..<k.count {
                 let s0 = rotateRight(A, by: 2) ^ rotateRight(A, by: 13) ^ rotateRight(A, by: 22)
@@ -79,7 +79,7 @@ final public class SHA256 {
                 let s1 = rotateRight(E, by: 6) ^ rotateRight(E, by: 11) ^ rotateRight(E, by: 25)
                 let ch = (E & F) ^ ((~E) & G)
                 let t1 = H &+ s1 &+ ch &+ UInt32(k[j]) &+ M[j]
-
+                
                 H = G
                 G = F
                 F = E
@@ -89,7 +89,7 @@ final public class SHA256 {
                 B = A
                 A = t1 &+ t2
             }
-
+            
             hh[0] = (hh[0] &+ A)
             hh[1] = (hh[1] &+ B)
             hh[2] = (hh[2] &+ C)
@@ -99,7 +99,7 @@ final public class SHA256 {
             hh[6] = (hh[6] &+ G)
             hh[7] = (hh[7] &+ H)
         }
-
+        
         // Produce the final hash value (big-endian) as a 160 bit number:
         var result = Array<UInt8>()
         result.reserveCapacity(hh.count / 4)
@@ -110,11 +110,11 @@ final public class SHA256 {
         }
         return result
     }
-
+    
     private lazy var h: Array<UInt64> = {
         return [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]
     }()
-
+    
     private lazy var k: Array<UInt64> = {
         return [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
                 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -125,26 +125,26 @@ final public class SHA256 {
                 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
                 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2]
     }()
-
+    
     private func rotateRight(_ value: UInt32, by: UInt32) -> UInt32 {
         return (value >> by) | (value << (32 - by))
     }
-
+    
     private func arrayOfBytes<T>(value: T, length: Int? = nil) -> Array<UInt8> {
         let totalBytes = length ?? MemoryLayout<T>.size
-
+        
         let valuePointer = UnsafeMutablePointer<T>.allocate(capacity: 1)
         valuePointer.pointee = value
-
+        
         let bytesPointer = UnsafeMutablePointer<UInt8>(OpaquePointer(valuePointer))
         var bytes = Array<UInt8>(repeating: 0, count: totalBytes)
         for j in 0..<min(MemoryLayout<T>.size, totalBytes) {
             bytes[totalBytes - 1 - j] = (bytesPointer + j).pointee
         }
-
-        valuePointer.deinitialize()
-        valuePointer.deallocate(capacity: 1)
-
+        
+        valuePointer.deinitialize(count: 1)
+        valuePointer.deallocate()
+        
         return bytes
     }
 }
@@ -161,37 +161,34 @@ internal extension Collection where Self.Iterator.Element == UInt8, Self.Index =
             val |= !self.isEmpty ? UInt32(self[idx]) : 0
             result.append(val)
         }
-
+        
         return result
     }
 }
 
 internal func bitPadding(to data: Array<UInt8>, blockSize: Int, allowance: Int = 0) -> Array<UInt8> {
     var tmp = data
-
+    
     // Step 1. Append Padding Bits
     tmp.append(0x80) // append one bit (UInt8 with one bit) to message
-
     // append "0" bit until message length in bits ≡ 448 (mod 512)
     var msgLength = tmp.count
     var counter = 0
-
+    
     while msgLength % blockSize != (blockSize - allowance) {
         counter += 1
         msgLength += 1
     }
-
+    
     tmp += Array<UInt8>(repeating: 0, count: counter)
     return tmp
 }
 
 internal struct BytesSequence<D: RandomAccessCollection>: Sequence where D.Iterator.Element == UInt8,
-    D.IndexDistance == Int,
-    D.SubSequence.IndexDistance == Int,
 D.Index == Int {
-    let chunkSize: D.IndexDistance
+    let chunkSize: D.Index
     let data: D
-
+    
     func makeIterator() -> AnyIterator<D.SubSequence> {
         var offset = data.startIndex
         return AnyIterator {
@@ -210,7 +207,7 @@ extension Data {
         let rawValue: Int
         static let upperCase = HexEncodingOptions(rawValue: 1 << 0)
     }
-
+    
     func hexEncodedString(options: HexEncodingOptions = []) -> String {
         let format = options.contains(.upperCase) ? "%02hhX" : "%02hhx"
         return map { String(format: format, $0) }.joined()
